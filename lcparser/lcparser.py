@@ -1,6 +1,4 @@
 """
-TODO: Lint with black.
-
 Additional Features:
     - Peak Deconvolution (for better peak integration, etc.)
 
