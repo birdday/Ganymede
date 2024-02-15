@@ -26,7 +26,7 @@ class LCData:
 
         Args:
             metadata (dict): Dictionary of the metadata from the LC run.
-            data (list[float, str, float]): Array containing the raw data as [time, step, value]. 
+            data (list[float, str, float]): Array containing the raw data as [time, step, value].
         """
 
         self.metadata = metadata
@@ -41,7 +41,7 @@ class LCData:
         """
 
         return [row[0] for row in self.data]
-    
+
     def get_step(self):
         """Getter for step values.
 
@@ -50,7 +50,7 @@ class LCData:
         """
 
         return [row[1] for row in self.data]
-    
+
     def get_value(self):
         """Getter for absorbance values.
 
@@ -59,9 +59,9 @@ class LCData:
         """
 
         return [row[2] for row in self.data]
-    
+
     # --- Data processing
-    def process_raw_chromatogram(self, sigma=1.):
+    def process_raw_chromatogram(self, sigma=1.0):
         """Perfroms data smoothing and baseline correction using a gaussian 1D smoothing algorithm and Zhang fit algorithm, respectively. Assigns results to object property, ydata_processed.
         Scipy Docs: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html
         BaselineRemoval Docs: https://pypi.org/project/BaselineRemoval/
@@ -77,7 +77,7 @@ class LCData:
         self.ydata_processed = ydata_baseline_corrected
 
     # --- Peak methods
-    def detect_peaks(self, width=0., height=0., distance=3):
+    def detect_peaks(self, width=0.0, height=0.0, distance=3):
         """Detects peaks using the processed ydata for the LC run. If no processed data is present, it will be generated using default values.
 
         Args:
@@ -96,17 +96,19 @@ class LCData:
         except AttributeError:
             self.process_raw_chromatogram(sigma=1)
 
-        peaks, peak_props = find_peaks(ydata, width=width, height=height, distance=distance)
-        self.peaks = {"peak_index": peaks, "peak_props":peak_props}
+        peaks, peak_props = find_peaks(
+            ydata, width=width, height=height, distance=distance
+        )
+        self.peaks = {"peak_index": peaks, "peak_props": peak_props}
         self._adjust_peak_bases()
-    
+
     def integrate_peaks(self):
         """Integrates the detected peaks as an approximation of elution volume.
-        
+
         This will use left/right_bases_adjusted data to avoid double counting peak area.
         Peak integration can be improved by adding peak deconvolution to object.
         """
-        
+
         xdata = self.get_time()
         try:
             ydata = self.ydata_processed
@@ -119,36 +121,40 @@ class LCData:
         lower = peak_props["left_bases_adjusted"]
         upper = peak_props["right_bases_adjusted"]
 
-        peak_areas = [np.trapz(ydata[lb:ub], x=xdata[lb:ub]) for lb, ub in zip(lower, upper)]
+        peak_areas = [
+            np.trapz(ydata[lb:ub], x=xdata[lb:ub]) for lb, ub in zip(lower, upper)
+        ]
         self.peaks["peak_areas"] = peak_areas
 
     def _adjust_peak_bases(self):
         """Function for adjusting peak boundaries to avoid overlapping peak sections.
-        
+
         Crunchy method that does not yield perfect results. For non-overlapping sections of peaks, a 'peak' will be added for the baseline inbetween sections, but since this is used primarily for peak integration and these peaks will have ~0 area, it is okay for a first pass.
         Should be fixed / updated for production work.
         """
 
-        lb = self.peaks.get('peak_props').get('left_bases')
-        rb = self.peaks.get('peak_props').get('right_bases')
+        lb = self.peaks.get("peak_props").get("left_bases")
+        rb = self.peaks.get("peak_props").get("right_bases")
         peak_bases_sorted = sorted(list(set(np.concatenate((lb, rb)))))
         lb_new = peak_bases_sorted[0:-1]
         rb_new = peak_bases_sorted[1::]
 
-        self.peaks['peak_props']['left_bases_adjusted'] = lb_new
-        self.peaks['peak_props']['right_bases_adjusted'] = rb_new
+        self.peaks["peak_props"]["left_bases_adjusted"] = lb_new
+        self.peaks["peak_props"]["right_bases_adjusted"] = rb_new
 
     def calculate_elution_volumes(self):
-        """Calculates the elution volumes corresponding to each peak. 
+        """Calculates the elution volumes corresponding to each peak.
 
         Assuming all intejected fluid exits within the timeframe of the experiment, than the area of a peak is proportional to the elution volume (also assuming linear signal intensity, independent of species).
         """
 
-        injection_volume = float(self.metadata['Injection Information']['Injection Volume (µL)'])
-        peak_areas = self.peaks['peak_areas']
+        injection_volume = float(
+            self.metadata["Injection Information"]["Injection Volume (µL)"]
+        )
+        peak_areas = self.peaks["peak_areas"]
         total_area = np.sum(peak_areas)
-        elution_volumes = [a/total_area*injection_volume for a in peak_areas]
-        self.peaks['elution_volume'] = elution_volumes
+        elution_volumes = [a / total_area * injection_volume for a in peak_areas]
+        self.peaks["elution_volume"] = elution_volumes
 
 
 def parse_lc_textfile(file):
@@ -163,7 +169,7 @@ def parse_lc_textfile(file):
     Note for file format encoding: https://stackoverflow.com/questions/17912307/u-ufeff-in-python-string
     """
 
-    f = open(file, "r",  encoding="utf-8-sig")
+    f = open(file, "r", encoding="utf-8-sig")
     lines = f.readlines()
 
     section = None
@@ -182,7 +188,7 @@ def parse_lc_textfile(file):
             if section != "Chromatogram Data":
                 metadata[section] = {}
             continue
-        
+
         if not section:
             key, val = line_split[0], line_split[1]
             metadata[key] = val
@@ -276,22 +282,23 @@ def plot_peak_data(obj, xlim=None, ylim=None, peak_lines=True, peak_areas=False)
 
     plt.xlabel(obj.metadata["Chromatogram Data Information"]["Units"][0])
     plt.ylabel(obj.metadata["Chromatogram Data Information"]["Units"][2])
-    plt.plot(xdata, ydata, '-', label="Processed Data")
+    plt.plot(xdata, ydata, "-", label="Processed Data")
     if peak_lines:
         plt.vlines(
-            [xdata[i] for i in peaks], [0 for _ in peaks],
+            [xdata[i] for i in peaks],
+            [0 for _ in peaks],
             [h for h in peak_props["peak_heights"]],
-            colors='red',
-            linestyle='-.'
+            colors="red",
+            linestyle="-.",
         )
     if peak_areas:
-        lower = obj.peaks['peak_props']['left_bases_adjusted']
-        upper = obj.peaks['peak_props']['right_bases_adjusted']
+        lower = obj.peaks["peak_props"]["left_bases_adjusted"]
+        upper = obj.peaks["peak_props"]["right_bases_adjusted"]
         for i, (lb, ub) in enumerate(zip(lower, upper)):
             if i % 2 == 0:
-                color='lightgreen'
+                color = "lightgreen"
             else:
-                color='darkgreen'
+                color = "darkgreen"
             plt.fill_between(xdata[lb:ub], ydata[lb:ub], color=color)
 
     plt.xlim(xlim)
