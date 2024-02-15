@@ -1,7 +1,5 @@
 """
 TODO:
-    - Check naming conventions for classes, methods, and functions.
-    - Doctstrings
     - Tests
     - Setup.py
 
@@ -65,47 +63,19 @@ class LCData:
         return [row[2] for row in self.data]
     
     # --- Data processing
-    @staticmethod
-    def _smooth_data(ydata, sigma):
-        """Smooths the data using a gaussian 1d filter.
-
-        Args:
-            ydata (list[float]): Data to be smoothed.
-            sigma (float): Standard deviation for Gaussian kernel.
-
-        Returns:
-            list[float]: Smoothed data.
-
-        Scipy Docs: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html
-        """
-
-        return gaussian_filter1d(ydata, sigma)
-    
-    @staticmethod
-    def _adjust_baseline(ydata):
-        """Adjusts the data according to the baseline using a Zhang fitting algorithm.
-        https://pypi.org/project/BaselineRemoval/
-
-        Args:
-            ydata (list[float]): Data for which baseline correction will be performed.
-
-        Returns:
-            list[float]: Baseline corrected data.
-        """
-
-        base_obj = BaselineRemoval(ydata)
-        return base_obj.ZhangFit()
-
     def process_raw_chromatogram(self, sigma=1.):
         """Perfroms data smoothing and baseline correction using a gaussian 1D smoothing algorithm and Zhang fit algorithm, respectively. Assigns results to object property, ydata_processed.
+        Scipy Docs: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html
+        BaselineRemoval Docs: https://pypi.org/project/BaselineRemoval/
 
         Args:
             sigma (float, optional): Standard deviation for Gaussian kernel. Defaults to 1.
         """
 
         ydata = self.get_value()
-        ydata_smoothed = self._smooth_data(ydata, sigma)
-        ydata_baseline_corrected = self._adjust_baseline(ydata_smoothed)
+        ydata_smoothed = gaussian_filter1d(ydata, sigma)
+        base_obj = BaselineRemoval(ydata_smoothed)
+        ydata_baseline_corrected = base_obj.ZhangFit()
         self.ydata_processed = ydata_baseline_corrected
 
     # --- Peak methods
