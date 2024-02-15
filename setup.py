@@ -8,12 +8,12 @@ setup(name='lcparser',
       packages=['lcparser'],
       install_requires=[
           'numpy',
-          'scipy'
+          'scipy',
           'matplotlib',
           'mpl_interactions',
           'BaselineRemoval',
-          'ipympl'
-          'ipykernel'
-          'pytest'
+          'ipympl',
+          'ipykernel',
+          'pytest',
       ]
 )
