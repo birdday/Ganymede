@@ -1,8 +1,4 @@
 """
-TODO:
-    - Tests
-    - Setup.py
-
 Additional Features:
     - Peak Deconvolution (for better peak integration, etc.)
 
