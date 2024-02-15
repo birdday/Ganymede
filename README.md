@@ -6,7 +6,7 @@ Solution to Ganymede take home exercise by Brian A. Day.
 
 Of the many instruments and data that SSE’s come across, among the most prevalent are various forms of liquid chromatography (LC) machines. These instruments enable users to separate and precisely quantify constituents of mixtures across many different properties. In this take-home, you’ll write some code to parse and analyze some data output from an LC instrument.
 
-1. Write a parser in Python that reads in the example data located here (https://github.com/Tarskin/HappyTools/blob/master/Example%20Data/IgG%20Vtag%201_ACQUITY%20FLR%20ChA.txt) and creates a Python class that holds the following:
+1. Write a parser in Python that reads in the example data located [here](https://github.com/Tarskin/HappyTools/blob/master/Example%20Data/IgG%20Vtag%201_ACQUITY%20FLR%20ChA.txt) and creates a Python class that holds the following:
 
    - Metadata for the chromatogram run - injection information, chromatogram data information, and the signal parameter information section
    - Raw chromatogram data
