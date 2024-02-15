@@ -1,4 +1,6 @@
 """
+TODO: Lint with black.
+
 Additional Features:
     - Peak Deconvolution (for better peak integration, etc.)
 
@@ -86,6 +88,7 @@ class LCData:
         In Scipy, width, height, and distance can all be None, but the corresponding metadata will not be present, hence the numeric defaults here.
         Scipy Docs: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html
         Threshold/Prominence: https://stackoverflow.com/questions/76786670/what-is-the-difference-between-threshold-and-prominence-in-scipy-find-peaks
+        left/right_bases often double counts sections of the chromatogram, as noted here: https://github.com/scipy/scipy/issues/19232. Hence, we generated adjusted peak_bases which ensures no overlap between peaks.
         """
 
         try:
@@ -95,11 +98,12 @@ class LCData:
 
         peaks, peak_props = find_peaks(ydata, width=width, height=height, distance=distance)
         self.peaks = {"peak_index": peaks, "peak_props":peak_props}
+        self._adjust_peak_bases()
     
     def integrate_peaks(self):
         """Integrates the detected peaks as an approximation of elution volume.
-
-        Integration uses the left/right bases from the peaks properties, but this can often lead to double counting sections of the chromatogram, as outline here: https://github.com/scipy/scipy/issues/19232.
+        
+        This will use left/right_bases_adjusted data to avoid double counting peak area.
         Peak integration can be improved by adding peak deconvolution to object.
         """
         
@@ -107,16 +111,44 @@ class LCData:
         try:
             ydata = self.ydata_processed
             peak_props = self.peaks["peak_props"]
-        except:
+        except AttributeError:
             self.detect_peaks()
             ydata = self.ydata_processed
             peak_props = self.peaks["peak_props"]
 
-        lower = peak_props["left_bases"]
-        upper = peak_props["right_bases"]
+        lower = peak_props["left_bases_adjusted"]
+        upper = peak_props["right_bases_adjusted"]
 
         peak_areas = [np.trapz(ydata[lb:ub], x=xdata[lb:ub]) for lb, ub in zip(lower, upper)]
         self.peaks["peak_areas"] = peak_areas
+
+    def _adjust_peak_bases(self):
+        """Function for adjusting peak boundaries to avoid overlapping peak sections.
+        
+        Crunchy method that does not yield perfect results. For non-overlapping sections of peaks, a 'peak' will be added for the baseline inbetween sections, but since this is used primarily for peak integration and these peaks will have ~0 area, it is okay for a first pass.
+        Should be fixed / updated for production work.
+        """
+
+        lb = self.peaks.get('peak_props').get('left_bases')
+        rb = self.peaks.get('peak_props').get('right_bases')
+        peak_bases_sorted = sorted(list(set(np.concatenate((lb, rb)))))
+        lb_new = peak_bases_sorted[0:-1]
+        rb_new = peak_bases_sorted[1::]
+
+        self.peaks['peak_props']['left_bases_adjusted'] = lb_new
+        self.peaks['peak_props']['right_bases_adjusted'] = rb_new
+
+    def calculate_elution_volumes(self):
+        """Calculates the elution volumes corresponding to each peak. 
+
+        Assuming all intejected fluid exits within the timeframe of the experiment, than the area of a peak is proportional to the elution volume (also assuming linear signal intensity, independent of species).
+        """
+
+        injection_volume = float(self.metadata['Injection Information']['Injection Volume (µL)'])
+        peak_areas = self.peaks['peak_areas']
+        total_area = np.sum(peak_areas)
+        elution_volumes = [a/total_area*injection_volume for a in peak_areas]
+        self.peaks['elution_volume'] = elution_volumes
 
 
 def parse_lc_textfile(file):
@@ -200,13 +232,15 @@ def plot_raw_vs_processed_data(obj, xlim=None, ylim=None):
     display(figure.canvas)
 
 
-def plot_peak_data(obj, xlim=None, ylim=None):
+def plot_peak_data(obj, xlim=None, ylim=None, peak_lines=True, peak_areas=False):
     """Generates a plot of the processed data and denotes the peak positions.
 
     Args:
         obj (LCData): LCData object containing data and metadata.
         xlim (None|list[float, float], optional): Sets the xlim for the plot. Defaults to None.
         ylim (None|list[float, float], optional): Sets the ylim for the plot. Defaults to None.
+        peak_lines (bool, optional): Indicates if lines showing peaks will be drawn. Defaults to True.
+        peak_areas (bool, optional): Indicates if inegrated peak areas will be drawn. Defaults to False.
     """
 
     try:
@@ -229,12 +263,23 @@ def plot_peak_data(obj, xlim=None, ylim=None):
     plt.xlabel(obj.metadata["Chromatogram Data Information"]["Units"][0])
     plt.ylabel(obj.metadata["Chromatogram Data Information"]["Units"][2])
     plt.plot(xdata, ydata, '-', label="Processed Data")
-    plt.vlines(
-        [xdata[i] for i in peaks], [0 for _ in peaks],
-        [h for h in peak_props["peak_heights"]],
-        colors='red',
-        linestyle='-.'
-    )
+    if peak_lines:
+        plt.vlines(
+            [xdata[i] for i in peaks], [0 for _ in peaks],
+            [h for h in peak_props["peak_heights"]],
+            colors='red',
+            linestyle='-.'
+        )
+    if peak_areas:
+        lower = obj.peaks['peak_props']['left_bases_adjusted']
+        upper = obj.peaks['peak_props']['right_bases_adjusted']
+        for i, (lb, ub) in enumerate(zip(lower, upper)):
+            if i % 2 == 0:
+                color='lightgreen'
+            else:
+                color='darkgreen'
+            plt.fill_between(xdata[lb:ub], ydata[lb:ub], color=color)
+
     plt.xlim(xlim)
     plt.ylim(ylim)
 

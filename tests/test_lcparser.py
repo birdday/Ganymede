@@ -2,7 +2,7 @@ from lcparser.lcparser import LCData, parse_lc_textfile
 
 metadata = {'File Path': 'fake/file/path.txt',
             'Channel': 'channel',
-            'Injection Information': {},
+            'Injection Information': {'Injection Volume (µL)': '25.0'},
             'Chromatogram Data Information': {'Units': ['Time (min)', 'Step (s)', 'Value (EU)']},
             'Signal Parameter Information': {}}
 
@@ -54,3 +54,14 @@ def test_integrate_peaks():
     test_obj.integrate_peaks()
     assert 'peak_areas' in test_obj.peaks.keys()
     assert len(test_obj.peaks["peak_areas"]) == 2
+
+
+def test_adjust_peak_bases():
+    test_obj._adjust_peak_bases()
+    assert 'left_bases_adjusted' in test_obj.peaks['peak_props']
+    assert 'right_bases_adjusted' in test_obj.peaks['peak_props']
+
+
+def test_calculate_elution_volumes():
+    test_obj.calculate_elution_volumes()
+    assert 'elution_volume' in test_obj.peaks
