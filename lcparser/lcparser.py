@@ -152,8 +152,18 @@ class LCData:
 
 
 def parse_lc_textfile(file):
+    """Parses a Liquid Chromatography txt data file (matching the example data format) into an LCData object.
+
+    Args:
+        file (str): Path to text file.
+
+    Returns:
+        LCData: Object containing chromatogram data and metadata.
+
+    Note for file format encoding: https://stackoverflow.com/questions/17912307/u-ufeff-in-python-string
+    """
+
     f = open(file, "r",  encoding="utf-8-sig")
-    # https://stackoverflow.com/questions/17912307/u-ufeff-in-python-string
     lines = f.readlines()
 
     section = None
@@ -166,6 +176,7 @@ def parse_lc_textfile(file):
         if line == "\n":
             continue
 
+        # Determines sections based on line length, and adds metadata to appropriate section.
         if len(line_split) == 1:
             section = line_split[0].replace(":", "")
             if section != "Chromatogram Data":
@@ -180,12 +191,15 @@ def parse_lc_textfile(file):
             key, val = line_split[0], line_split[1]
             metadata[section][key] = val
 
+        # Cromatogram Data Section is used to generate a data list, not a metadata dictionary.
         if section == "Chromatogram Data":
             data.append(line_split)
 
+    # Removes units from chromatogram data section and adds to metadata
     data_units = data[0]
     metadata["Chromatogram Data Information"]["Units"] = data_units
 
+    # Fixes datatypes for chromatogram data
     data_new = []
     for row in data[1::]:
         row_new = [float(row[0]), row[1], float(row[2])]
