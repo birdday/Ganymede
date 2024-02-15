@@ -50,10 +50,10 @@ class LCData:
         return [row[1] for row in self.data]
 
     def get_value(self):
-        """Getter for absorbance values.
+        """Getter for signal values.
 
         Returns:
-            list[float]: 1-D array of the absorbance values.
+            list[float]: 1-D array of the signal values.
         """
 
         return [row[2] for row in self.data]
