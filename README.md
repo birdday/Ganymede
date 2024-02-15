@@ -2,6 +2,10 @@
 
 Solution to Ganymede take home exercise by Brian A. Day.
 
+## Installation Instructions
+
+Clone the repository. In a new environment (recommended), run `pip install -e .` from this directory. Note, I had to update pip for a successful install of the packages. Confirm successful install by running tests with `pytest`. Some tests throw a warning becuase of the packages used, but you should recieve no errors. Check out the examples.ipynb file for examples/solutions to the problems given below.
+
 ## Problem Statement
 
 Of the many instruments and data that SSE’s come across, among the most prevalent are various forms of liquid chromatography (LC) machines. These instruments enable users to separate and precisely quantify constituents of mixtures across many different properties. In this take-home, you’ll write some code to parse and analyze some data output from an LC instrument.
