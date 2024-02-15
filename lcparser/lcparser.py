@@ -7,7 +7,8 @@ Misc. Thoughts:
     - Would want to think longer about data structuring in the obj, esp processed_data.
     - How does data smoothing impact accuracy of peak integration w.r.t. to peak height?
     - How to handle 'step' values, with the one n.a.?
-    - How to handle data consistency, since we only support one set of smoothed data / peaks at a time? Could break that into another object, but need to consider the workflow.
+    - How to handle data consistency, since we only support one set of smoothed data / peaks at a time?
+      Could break that into another object, but need to consider the workflow.
 """
 
 import matplotlib.pyplot as plt
@@ -60,7 +61,9 @@ class LCData:
 
     # --- Data processing
     def process_raw_chromatogram(self, sigma=1.0):
-        """Perfroms data smoothing and baseline correction using a gaussian 1D smoothing algorithm and Zhang fit algorithm, respectively. Assigns results to object property, ydata_processed.
+        """Perfroms data smoothing and baseline correction using gaussian 1D smoothing algorithm and Zhang fit algorithm,
+        respectively. Assigns results to object property, ydata_processed.
+
         Scipy Docs: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html
         BaselineRemoval Docs: https://pypi.org/project/BaselineRemoval/
 
@@ -76,17 +79,22 @@ class LCData:
 
     # --- Peak methods
     def detect_peaks(self, width=0.0, height=0.0, distance=3):
-        """Detects peaks using the processed ydata for the LC run. If no processed data is present, it will be generated using default values.
+        """Detects peaks using the processed ydata for the LC run. If no processed data is present, it will be generated
+        using default values.
 
         Args:
             width (float, optional): Required width of peaks in samples. Defaults to 0.
             height (float, optional): Required height of peaks. Defaults to 0.
-            distance (int, optional): Required minimal horizontal distance (>= 1) in samples between neighbouring peaks. Smaller peaks are removed first until the condition is fulfilled for all remaining peaks. Defaults to 3.
+            distance (int, optional): Required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
+              Smaller peaks are removed first until the condition is fulfilled for all remaining peaks. Defaults to 3.
 
-        In Scipy, width, height, and distance can all be None, but the corresponding metadata will not be present, hence the numeric defaults here.
+        In Scipy, width, height, and distance can all be None, but the corresponding metadata will not be present, 
+        hence the numeric defaults here.
+
         Scipy Docs: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html
         Threshold/Prominence: https://stackoverflow.com/questions/76786670/what-is-the-difference-between-threshold-and-prominence-in-scipy-find-peaks
-        left/right_bases often double counts sections of the chromatogram, as noted here: https://github.com/scipy/scipy/issues/19232. Hence, we generated adjusted peak_bases which ensures no overlap between peaks.
+        left/right_bases often double counts sections of the chromatogram, as noted here: https://github.com/scipy/scipy/issues/19232.
+        Hence, we generated adjusted peak_bases which ensures no overlap between peaks.
         """
 
         try:
@@ -127,7 +135,9 @@ class LCData:
     def _adjust_peak_bases(self):
         """Function for adjusting peak boundaries to avoid overlapping peak sections.
 
-        Crunchy method that does not yield perfect results. For non-overlapping sections of peaks, a 'peak' will be added for the baseline inbetween sections, but since this is used primarily for peak integration and these peaks will have ~0 area, it is okay for a first pass.
+        Crunchy method that does not yield perfect results. For non-overlapping sections of peaks, a 'peak' will be 
+           added for the baseline inbetween sections, but since this is used primarily for peak integration and these
+           peaks will have ~0 area, it is okay for a first pass.
         Should be fixed / updated for production work.
         """
 
@@ -143,7 +153,8 @@ class LCData:
     def calculate_elution_volumes(self):
         """Calculates the elution volumes corresponding to each peak.
 
-        Assuming all intejected fluid exits within the timeframe of the experiment, than the area of a peak is proportional to the elution volume (also assuming linear signal intensity, independent of species).
+        Assuming all intejected fluid exits within the timeframe of the experiment, than the area of a peak is 
+        proportional to the elution volume (also assuming linear signal intensity, independent of species).
         """
 
         injection_volume = float(
